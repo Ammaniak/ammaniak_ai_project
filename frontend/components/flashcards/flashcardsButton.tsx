@@ -4,7 +4,7 @@ import { useState } from "react";
 type Props = {
   transcript: string;
   onFlashcardsGenerated: (
-    flashcards: { front: string; back: string }[]
+    flashcards: { id: number; front: string; back: string }[]
   ) => void;
 };
 

@@ -64,4 +64,56 @@ const createSummary = async (transcript: string) => {
     throw error;
   }
 };
-export { createFlashcards, createSummary, getFlashcardsForTranscript };
+
+const logFlashcardInteraction = async ({
+  flashcard_id,
+  user_id,
+  time_spent_seconds,
+  flips,
+  difficulty_rating,
+  start_time,
+}: {
+  flashcard_id: number;
+  user_id: string;
+  time_spent_seconds: number;
+  flips?: number;
+  difficulty_rating: number;
+  start_time: string;
+}) => {
+  try {
+    const response = await fetch(`${API_URL}/flashcard_interactions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        flashcard_id,
+        user_id,
+        time_spent_seconds,
+        flips,
+        difficulty_rating,
+        start_time,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to log flashcard interaction");
+    }
+
+    console.log("Interaction logged:", {
+      flashcard_id,
+      time_spent_seconds,
+      difficulty_rating,
+    });
+  } catch (error) {
+    console.error("Error logging interaction:", error);
+    throw error;
+  }
+};
+
+export {
+  createFlashcards,
+  createSummary,
+  getFlashcardsForTranscript,
+  logFlashcardInteraction,
+};

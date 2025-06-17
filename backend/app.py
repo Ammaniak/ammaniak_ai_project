@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
@@ -27,11 +28,80 @@ conn = psycopg2.connect(
 )
 cursor = conn.cursor()
 
+
+@app.route("/flashcard_interactions", methods=["POST"])
+def log_flashcard_interaction():
+    data = request.get_json()
+    flashcard_id = data["flashcard_id"]
+    user_id = data["user_id"]
+    flips = data["flips"]
+    time_spent = data["time_spent_seconds"]
+    difficulty = data["difficulty_rating"]
+
+    # Insert the interaction log
+    cursor.execute("""
+        INSERT INTO flashcard_interactions (flashcard_id, user_id, flips, time_spent_seconds, difficulty_rating)
+        VALUES (%s, %s,%s, %s, %s)
+    """, (flashcard_id, user_id, flips, time_spent, difficulty))
+
+    # Fetch current flashcard data
+    cursor.execute("""
+        SELECT easiness_factor, repetitions, interval FROM flashcards
+        WHERE id = %s
+    """, (flashcard_id,))
+    result = cursor.fetchone()
+    ef, reps, interval = result or (2.5, 0, 1)
+
+    # SM2 algorithm
+    if difficulty < 3:
+        reps = 0
+        interval = 1
+    else:
+        reps += 1
+        if reps == 1:
+            interval = 1
+        elif reps == 2:
+            interval = 6
+        else:
+            interval = round(interval * ef)
+
+        ef = ef + (0.1 - (5 - difficulty) * (0.08 + (5 - difficulty) * 0.02))
+        if ef < 1.3:
+            ef = 1.3
+
+    # Calculate due date
+    due_date = datetime.now() + timedelta(days=interval)
+
+    cursor.execute("""
+        UPDATE flashcards
+        SET easiness_factor = %s,
+            repetitions = %s,
+            interval = %s,
+            due_date = %s
+        WHERE id = %s
+    """, (ef, reps, interval, due_date, flashcard_id))
+
+    conn.commit()
+
+    return jsonify({"message": "Interaction logged and flashcard updated"})
+
+@app.route("/study/<int:user_id>", methods=["GET"])
+def get_due_flashcards(user_id):
+    now = datetime.now()
+    cursor.execute("""
+        SELECT f.id, f.front, f.back FROM flashcards f
+        JOIN transcripts t ON f.transcript_id = t.id
+        WHERE t.user_id = %s AND f.due_date <= %s
+    """, (user_id, now))
+    rows = cursor.fetchall()
+    flashcards = [{"id": r[0], "front": r[1], "back": r[2]} for r in rows]
+    return jsonify(flashcards)
+
 @app.route("/flashcards/<int:transcript_id>", methods=["GET"])
 def get_flashcards(transcript_id):
     cursor.execute("SELECT id, front, back FROM flashcards WHERE transcript_id = %s", (transcript_id,))
     rows = cursor.fetchall()
-    flashcards = [{ "front": r[1], "back": r[2]} for r in rows]
+    flashcards = [{"id":r[0], "front": r[1], "back": r[2]} for r in rows]
     return jsonify(flashcards)
 
 @app.route("/transcriptdetails/<int:transcript_id>", methods=["GET"])
@@ -115,9 +185,12 @@ def flashcards_route():
         )
     
     conn.commit()
-    return jsonify({
-        "flashcards": flashcards
-    })
+    cursor.execute("SELECT id, front, back FROM flashcards WHERE transcript_id = %s", (transcript_id,))
+    rows = cursor.fetchall()
+    flashcards = [{"id": r[0], "front": r[1], "back": r[2]} for r in rows]
+
+    return jsonify({"flashcards": flashcards})
+    
 
 
 @app.route("/chatbot", methods=["POST"])

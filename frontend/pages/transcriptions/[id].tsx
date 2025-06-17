@@ -4,6 +4,7 @@ import GenerateFlashcardsButton from "@/components/flashcards/flashcardsButton";
 import TranscriptSummary from "@/components/summarise/summarisationButton";
 import { getFlashcardsForTranscript } from "@/service/flashcardsService";
 import { getTranscriptById } from "@/service/transcriptionService";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 
@@ -20,7 +21,7 @@ const TranscriptPage = () => {
   const [transcript, setTranscript] = useState<Transcript | null>(null);
   const [loading, setLoading] = useState(true);
   const [flashcards, setFlashcards] = useState<
-    Array<{ front: string; back: string }>
+    Array<{ id: number; front: string; back: string }>
   >([]);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
   const router = useRouter();
@@ -47,7 +48,7 @@ const TranscriptPage = () => {
   }, [id]);
 
   const handleFlashcardGeneration = (
-    cards: Array<{ front: string; back: string }>
+    cards: Array<{ id: number; front: string; back: string }>
   ) => {
     console.log("Flashcards received:", cards);
     setFlashcards(cards);
@@ -95,6 +96,12 @@ const TranscriptPage = () => {
             Flashcards
           </h3>
           <FlashcardViewer flashcards={flashcards} />
+          <Link
+            className="bg-black text-white font-bold py-2 px-4 rounded"
+            href="/study"
+          >
+            Study Flashcards
+          </Link>
         </div>
       )}
     </div>

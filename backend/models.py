@@ -38,6 +38,17 @@ CREATE TABLE IF NOT EXISTS flashcards (
     due_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 """)
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS flashcard_interactions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    flashcard_id INTEGER REFERENCES flashcards(id),
+    flips INTEGER NOT NULL DEFAULT 0,
+    time_spent_seconds INTEGER NOT NULL,
+    difficulty_rating VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+""")
 
 conn.commit()
 cursor.close()
