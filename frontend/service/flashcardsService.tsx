@@ -1,5 +1,10 @@
 const createFlashcards = async (transcript: string) => {
   console.log("Sending transcript:", transcript);
+  const userId = localStorage.getItem("user_id");
+  if (!userId) {
+    console.error("User ID not found in localStorage.");
+    throw new Error("User not logged in.");
+  }
 
   try {
     const response = await fetch(
@@ -9,7 +14,7 @@ const createFlashcards = async (transcript: string) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ transcript }),
+        body: JSON.stringify({ transcript, user_id: userId }),
       }
     );
 
