@@ -27,6 +27,25 @@ conn = psycopg2.connect(
 )
 cursor = conn.cursor()
 
+@app.route("/flashcards/<int:transcript_id>", methods=["GET"])
+def get_flashcards(transcript_id):
+    cursor.execute("SELECT id, front, back FROM flashcards WHERE transcript_id = %s", (transcript_id,))
+    rows = cursor.fetchall()
+    flashcards = [{ "front": r[1], "back": r[2]} for r in rows]
+    return jsonify(flashcards)
+
+@app.route("/transcriptdetails/<int:transcript_id>", methods=["GET"])
+def get_transcript_details(transcript_id):
+    cursor.execute("SELECT id, content, created_at FROM transcripts WHERE id = %s", (transcript_id,))
+    row = cursor.fetchone()
+    if row:
+        result = {
+            "id": row[0],
+            "content": row[1],
+            "created_at": row[2].isoformat()
+        }
+        return jsonify(result)
+
 @app.route("/transcripts/<int:user_id>", methods=["GET"])
 def get_transcripts(user_id):
     cursor.execute("SELECT id, content, created_at FROM transcripts WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
@@ -89,7 +108,7 @@ def flashcards_route():
     for card in flashcards:
         cursor.execute(
             """
-            INSERT INTO flashcards (transcript_id, question, answer)
+            INSERT INTO flashcards (transcript_id, front, back)
             VALUES (%s, %s, %s)
             """,
             (transcript_id, card["front"], card["back"])
@@ -104,14 +123,14 @@ def flashcards_route():
 @app.route("/chatbot", methods=["POST"])
 def chatbot_route():
     data = request.get_json()
-    question = data.get("question")
+    front = data.get("front")
     transcript = data.get("transcript")
 
-    if not question or not transcript:
-        return jsonify({"error": "Missing transcript or question"}), 400
+    if not front or not transcript:
+        return jsonify({"error": "Missing transcript or front"}), 400
 
-    answer, _ = chatbot_with_context(question, transcript)
-    return jsonify({"answer": answer})
+    back, _ = chatbot_with_context(front, transcript)
+    return jsonify({"back": back})
 
 @app.route("/upload", methods=['POST', 'OPTIONS'])
 def upload_audio():

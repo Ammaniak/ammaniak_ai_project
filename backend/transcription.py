@@ -97,7 +97,7 @@ def get_chunks(file_path):
 
 
 def transcribe_all_chunks(chunk_paths):
-    combined_transcript = ""
+    transcripts = []
 
     for chunk_path in chunk_paths:
         try:
@@ -107,9 +107,8 @@ def transcribe_all_chunks(chunk_paths):
                     file=audio_file,
                     response_format="text"
                 )
-                combined_transcript += response + "\n"
-
+                transcripts.append(response.strip())
         except Exception as e:
             print(f"Error transcribing {chunk_path}: {e}")
 
-    return combined_transcript.strip()
+    return "\n".join(transcripts)

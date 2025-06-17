@@ -33,6 +33,23 @@ const uploadFile = async (file: File) => {
   }
 };
 
+const getTranscriptById = async (transcriptId: string) => {
+  try {
+    const response = await fetch(
+      `${API_URL}/transcriptdetails/${transcriptId}`
+    );
+    if (!response.ok) {
+      throw new Error("Error fetching transcript by id");
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error details:", {
+      error,
+    });
+  }
+};
+
 const getTranscripts = async (userId: string) => {
   try {
     const response = await fetch(`${API_URL}/transcripts/${userId}`);
@@ -52,4 +69,4 @@ const getTranscripts = async (userId: string) => {
   }
 };
 
-export { uploadFile, getTranscripts };
+export { uploadFile, getTranscripts, getTranscriptById };

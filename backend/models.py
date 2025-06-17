@@ -30,8 +30,8 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS flashcards (
     id SERIAL PRIMARY KEY,
     transcript_id INTEGER REFERENCES transcripts(id),
-    question TEXT NOT NULL,
-    answer TEXT NOT NULL,
+    front TEXT NOT NULL,
+    back TEXT NOT NULL,
     easiness_factor FLOAT DEFAULT 2.5,
     repetitions INTEGER DEFAULT 0,
     interval INTEGER DEFAULT 1,

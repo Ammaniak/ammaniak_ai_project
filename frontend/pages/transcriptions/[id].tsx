@@ -1,57 +1,104 @@
-// import { useRouter } from "next/router";
-// import { useEffect, useState } from "react";
-// import FlashcardViewer from "@/components/flashcards/flashcards";
-// import GenerateChatbotButton from "@/components/chatbot/chatbotButton";
-// import TranscriptSummary from "@/components/summarise/summarisationButton";
-// import { getTranscriptById } from "@/service/transcriptionService";
-// import { getFlashcardsByTranscriptId } from "@/service/flashcardsService";
+// pages/transcriptions/[id].tsx
+import FlashcardViewer from "@/components/flashcards/flashcards";
+import GenerateFlashcardsButton from "@/components/flashcards/flashcardsButton";
+import TranscriptSummary from "@/components/summarise/summarisationButton";
+import { getFlashcardsForTranscript } from "@/service/flashcardsService";
+import { getTranscriptById } from "@/service/transcriptionService";
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
-// const TranscriptDetailPage = () => {
-//   const router = useRouter();
-//   const { id } = router.query;
-//   const [transcript, setTranscript] = useState<string>("");
-//   const [flashcards, setFlashcards] = useState<
-//     Array<{ front: string; back: string }>
-//   >([]);
-//   const [loading, setLoading] = useState(true);
+interface Transcript {
+  id: number;
+  content: string;
+  created_at: string;
+}
+interface SummaryResponse {
+  summary: string;
+}
 
-//   useEffect(() => {
-//     const fetchData = async () => {
-//       if (!id) return;
+const TranscriptPage = () => {
+  const [transcript, setTranscript] = useState<Transcript | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [flashcards, setFlashcards] = useState<
+    Array<{ front: string; back: string }>
+  >([]);
+  const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const router = useRouter();
+  const { id } = router.query;
 
-//       try {
-//         const transcriptData = await getTranscriptById(id as string);
-//         const flashcardsData = await getFlashcardsByTranscriptId(id as string);
-//         setTranscript(transcriptData.content);
-//         setFlashcards(flashcardsData.flashcards);
-//         setLoading(false);
-//       } catch (err) {
-//         console.error("Failed to load transcript:", err);
-//       }
-//     };
+  useEffect(() => {
+    const fetchTranscript = async () => {
+      if (!id) return;
+      try {
+        const data = await getTranscriptById(id as string);
+        setTranscript(data);
 
-//     fetchData();
-//   }, [id]);
+        const flashcardData = await getFlashcardsForTranscript(id as string);
 
-//   if (loading) return <p>Loading transcript...</p>;
+        setFlashcards(flashcardData);
+      } catch (error) {
+        console.error("Error fetching transcript:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-//   return (
-//     <div className="p-6 max-w-4xl mx-auto">
-//       <h1 className="text-3xl font-bold mb-4">Transcript Details</h1>
-//       <p className="mb-6 text-gray-700 whitespace-pre-line">{transcript}</p>
+    fetchTranscript();
+  }, [id]);
 
-//       <div className="flex gap-4 mb-8">
-//         <TranscriptSummary
-//           transcript={transcript}
-//           OnSummaryGenerated={() => {}}
-//         />
-//         <GenerateChatbotButton transcript={transcript} />
-//       </div>
+  const handleFlashcardGeneration = (
+    cards: Array<{ front: string; back: string }>
+  ) => {
+    console.log("Flashcards received:", cards);
+    setFlashcards(cards);
+  };
+  const handleSummaryGeneration = (summary: string) => {
+    console.log("Summary received:", summary);
+    setSummary({ summary });
+  };
 
-//       <h2 className="text-2xl font-semibold mt-8 mb-4">Flashcards</h2>
-//       <FlashcardViewer flashcards={flashcards} />
-//     </div>
-//   );
-// };
+  if (loading) return <p>Loading...</p>;
+  if (!transcript) return <p>Transcript not found.</p>;
 
-// export default TranscriptDetailPage;
+  return (
+    <div className="p-8 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2">Transcript Details</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        Uploaded on: {new Date(transcript.created_at).toLocaleString("en-GB")}
+      </p>
+      <div className="bg-white border rounded-lg shadow p-4 whitespace-pre-wrap">
+        {transcript.content}
+      </div>
+      <div className="flex gap-4 mb-8 py-10">
+        {Array.isArray(flashcards) && flashcards.length === 0 && (
+          <GenerateFlashcardsButton
+            transcript={transcript.content}
+            onFlashcardsGenerated={handleFlashcardGeneration}
+          />
+        )}
+        {!summary && (
+          <TranscriptSummary
+            transcript={transcript.content}
+            OnSummaryGenerated={handleSummaryGeneration}
+          />
+        )}
+      </div>
+      {summary && (
+        <div className="mt-8 p-6 bg-white rounded-xl shadow-lg border border-mustard">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">Summary</h3>
+          <p className="text-gray-600 leading-relaxed">{summary.summary}</p>
+        </div>
+      )}
+      {Array.isArray(flashcards) && flashcards.length > 0 && (
+        <div className="mt-8 w-full max-w-3xl">
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">
+            Flashcards
+          </h3>
+          <FlashcardViewer flashcards={flashcards} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TranscriptPage;
