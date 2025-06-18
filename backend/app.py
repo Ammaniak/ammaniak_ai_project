@@ -3,14 +3,16 @@ import os
 from flask import Flask, request, jsonify
 from openai import OpenAI
 import psycopg2
-from chatbot import chatbot_with_context
-from api_services import create_flashcards_from_chunks, make_flashcards, parse_flashcards, split_transcript, summarise_text
-from transcription import get_chunks, transcribe_all_chunks
+from api_services.chatbot import chatbot_with_context
+from api_services.flashcards_summaries import create_flashcards_from_chunks, make_flashcards, parse_flashcards, split_transcript, summarise_text
+from api_services.transcription import get_chunks, transcribe_all_chunks
 from flask_cors import CORS
 import io
 import tempfile
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+import joblib
+import numpy as np
 load_dotenv()
 
 app = Flask(__name__)
@@ -18,6 +20,7 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 
 conn = psycopg2.connect(
     dbname="transcription_app",
@@ -28,7 +31,10 @@ conn = psycopg2.connect(
 )
 cursor = conn.cursor()
 
+model_path = os.path.join(os.path.dirname(__file__), "models", "easiness_predictor.pkl")
+model = joblib.load(model_path)
 
+#flashcard study tools
 @app.route("/flashcard_interactions", methods=["POST"])
 def log_flashcard_interaction():
     data = request.get_json()
@@ -51,25 +57,35 @@ def log_flashcard_interaction():
     """, (flashcard_id,))
     result = cursor.fetchone()
     ef, reps, interval = result or (2.5, 0, 1)
+    features = np.array([[flips, time_spent, difficulty, ef, reps]])
+    try:
+        predicted_interval = int(model.predict(features)[0])
+        interval = max(1, predicted_interval)
+    except Exception as e:
+        print("Prediction error:", str(e))
 
     # SM2 algorithm
-    if difficulty < 3:
-        reps = 0
-        interval = 1
-    else:
-        reps += 1
-        if reps == 1:
+        if difficulty < 3:
+            reps = 0
             interval = 1
-        elif reps == 2:
-            interval = 6
         else:
-            interval = round(interval * ef)
+            reps += 1
+            if reps == 1:
+                interval = 1
+            elif reps == 2:
+                interval = 6
+            else:
+                interval = round(interval * ef)
 
-        ef = ef + (0.1 - (5 - difficulty) * (0.08 + (5 - difficulty) * 0.02))
-        if ef < 1.3:
-            ef = 1.3
+            ef = ef + (0.1 - (5 - difficulty) * (0.08 + (5 - difficulty) * 0.02))
+            if ef < 1.3:
+                ef = 1.3
 
     # Calculate due date
+    due_date = datetime.now() + timedelta(days=interval)
+
+    
+
     due_date = datetime.now() + timedelta(days=interval)
 
     cursor.execute("""
@@ -103,6 +119,8 @@ def get_flashcards(transcript_id):
     rows = cursor.fetchall()
     flashcards = [{"id":r[0], "front": r[1], "back": r[2]} for r in rows]
     return jsonify(flashcards)
+
+# fetching transcripts
 
 @app.route("/transcriptdetails/<int:transcript_id>", methods=["GET"])
 def get_transcript_details(transcript_id):
@@ -144,6 +162,9 @@ def login_user():
 
     return jsonify({"user_id": user_id})
 
+
+
+# study tools basic functionality
 @app.route("/summarise", methods=["POST"])
 def summarise_route():
     data = request.get_json()

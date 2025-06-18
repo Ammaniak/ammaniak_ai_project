@@ -17,8 +17,7 @@ def summarise_text(transcript: str)->str:
     return response.choices[0].message.content
 
 
-
-
+#chunks transcript using punctuation as a guide
 def split_transcript(transcript: str, max_chars=1500):
     # Split into sentences (roughly)
     sentences = re.split(r'(?<=[.!?]) +', transcript)
@@ -42,7 +41,8 @@ def split_transcript(transcript: str, max_chars=1500):
 
     return chunks
 
-
+#api request to generate cards from chunks
+#history?
 def make_flashcards(transcript: str)->str:
     response = client.chat.completions.create(
         model = "meta-llama/Llama-3.3-70B-Instruct-Turbo",
@@ -66,7 +66,7 @@ def make_flashcards(transcript: str)->str:
     
     return response.choices[0].message.content
 
-
+#splits into front back dict value pairs
 def parse_flashcards(raw_text):
     cards = []
     chunks = raw_text.strip().split("\n\n") 
@@ -86,13 +86,13 @@ def parse_flashcards(raw_text):
 
     return cards
 
-
+#makes and accumulates all flashcards
 def create_flashcards_from_chunks(chunks):
     flashcards = []
     for chunk in chunks:
         raw_output = make_flashcards(chunk)
         structured = parse_flashcards(raw_output)
-        if structured:  #only add cards if parsing produced valid cards
+        if structured: 
             flashcards.extend(structured)  
     return flashcards
 

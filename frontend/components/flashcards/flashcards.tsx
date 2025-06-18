@@ -18,8 +18,6 @@ const FlashcardViewer: React.FC<Props> = ({ flashcards }) => {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [flipCount, setFlipCount] = useState(0);
 
-  const userId = localStorage.getItem("user_id");
-
   useEffect(() => {
     setStartTime(new Date());
     setFlipCount(0);
@@ -30,6 +28,8 @@ const FlashcardViewer: React.FC<Props> = ({ flashcards }) => {
   const currentCard = flashcards[current];
 
   const handleRateAndNext = async (difficulty: number) => {
+    const userId = localStorage.getItem("user_id");
+
     if (!startTime || !userId) return;
 
     const timeSpentSeconds = Math.floor(

@@ -11,6 +11,7 @@ load_dotenv()
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+#used to group smaller chunks together if smaller than min size
 def process_chunks(chunks, min_chunk_size):
     sec_in_chunk = 0
     combined_chunk = AudioSegment.empty()
@@ -30,7 +31,7 @@ def process_chunks(chunks, min_chunk_size):
 
     return final_chunks
 
-
+#saves chunks to disk, saves audio files in a subfolder named with the current timestamp
 def save_chunks(chunks, og_file_time):
     project_dir = os.getcwd();
     chunks_path = os.path.join(project_dir, "chunks")
@@ -51,7 +52,7 @@ def save_chunks(chunks, og_file_time):
 
     return chunk_file_names
 
-
+#takes full audio file, splits into chunks based on silences
 def get_chunks(file_path):
     start_time = datetime.datetime.now()
     min_chunk_size = 10
@@ -67,13 +68,14 @@ def get_chunks(file_path):
         print(f"Audio decoding error: {e}")
         raise e
 
+    #dynamically set silence threshold
     silence_thresh = audio_file.dBFS - 10
 
     chunks = split_on_silence(
         audio_file, 
-        min_silence_len=1000,         # Lowered from 800
+        min_silence_len=1000,         
         silence_thresh=silence_thresh,
-        keep_silence=500             # Keep some silence padding
+        keep_silence=500             
     )
 
     if len(chunks) == 0:
@@ -95,7 +97,7 @@ def get_chunks(file_path):
         "file_names": chunk_file_names
     }
 
-
+#sends each chunk to model api(gpt-4o-transcribe) for transcription
 def transcribe_all_chunks(chunk_paths):
     transcripts = []
 
@@ -110,5 +112,5 @@ def transcribe_all_chunks(chunk_paths):
                 transcripts.append(response.strip())
         except Exception as e:
             print(f"Error transcribing {chunk_path}: {e}")
-
+    #join transcripts together
     return "\n".join(transcripts)

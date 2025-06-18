@@ -36,6 +36,12 @@ const Header: React.FC = () => {
         >
           Your Transcriptions
         </Link>
+        <Link
+          href="/study"
+          className=" px-4 text-xl text-white  hover:bg-gray-600 rounded-lg"
+        >
+          Study Room
+        </Link>
         {loggedIn && (
           <a
             href="/login"

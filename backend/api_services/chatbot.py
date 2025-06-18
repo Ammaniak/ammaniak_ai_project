@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
+#current question, transcript and history is passed
 def chatbot_with_context(question, transcript, history=None):
     system_prompt = (
         "You are a helpful educational assistant. When a student asks a question, "
@@ -14,23 +14,22 @@ def chatbot_with_context(question, transcript, history=None):
 
     if history is None:
         history = []
-
-    # Start with the system + transcript
+    #adds system prompt and transcript, and any previous history to the messages, appends new question
     messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"Transcript:\n{transcript}"}
     ]
 
-    # Add prior history if any
     messages.extend(history)
 
-    # Add new question
     messages.append({"role": "user", "content": question})
 
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
+        #more creative responses
         temperature=0.7,
+        #size of message it can take, for performance
         max_tokens=1000,
     )
 

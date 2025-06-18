@@ -40,6 +40,20 @@ const getFlashcardsForTranscript = async (transcript_id: string) => {
   return data;
 };
 
+const getDueFlashcardsForUser = async (userId: string) => {
+  try {
+    const response = await fetch(API_URL + `/study/${userId}`);
+    if (!response.ok) {
+      throw new Error("Flashcard fetch failed");
+    }
+    const data = await response.json();
+    console.log("Received flashcards: ", data);
+    return data;
+  } catch (error) {
+    console.error("Error getting due flashcards:", error);
+  }
+};
+
 const createSummary = async (transcript: string) => {
   console.log("Sending transcript:", transcript);
 
@@ -116,4 +130,5 @@ export {
   createSummary,
   getFlashcardsForTranscript,
   logFlashcardInteraction,
+  getDueFlashcardsForUser,
 };
